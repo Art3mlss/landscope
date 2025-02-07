@@ -1,0 +1,8 @@
+# Git
+.gitignore
+
+# Python
+.venv
+
+# PyCharm
+.idea
