@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from sklearn.neighbors import KNeighborsClassifier
 import joblib  # Pour sauvegarder le modèle
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, precision_score
 
 # Dossier contenant les images d'entraînement
 DATASET_DIR = "dataset"
@@ -40,20 +42,19 @@ def create_dataset():
     data = []
 
     for label in LABELS:
-        label_path = os.path.join(DATASET_DIR, label)
-        if not os.path.exists(label_path):
+        train_path = os.path.join(DATASET_DIR, label, "train")
+        if not os.path.exists(train_path):
             continue  # Ignore si le dossier n'existe pas
 
-        for image_name in os.listdir(label_path):
+        for image_name in os.listdir(train_path):
             if image_name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                image_path = os.path.join(label_path, image_name)
+                image_path = os.path.join(train_path, image_name)
                 features = extract_features(image_path)
                 data.append(features + [label])
 
-    df = pd.DataFrame(data, columns=["dom_R", "dom_G", "dom_B", "avg_R", "avg_G", "avg_B", "label"])
+a    df = pd.DataFrame(data, columns=["dom_R", "dom_G", "dom_B", "avg_R", "avg_G", "avg_B", "label"])
     df.to_csv(CSV_FILE, index=False)
     print(f"Dataset enregistré sous {CSV_FILE}")
-
 
 def train_knn_model():
     """Entraîne un modèle KNN avec le dataset de couleurs."""
@@ -87,6 +88,47 @@ def classify_image(image_path):
     plt.show()
     print(f"L'image est classée comme : {prediction}")
 
+def evaluate_model():
+    """Évalue le modèle KNN en affichant une matrice de confusion normalisée et les précisions pour chaque classe."""
+    if not os.path.exists(MODEL_FILE):
+        print("Le modèle n'est pas encore entraîné ! Lancez `train_knn_model()`.")
+        return
+
+    knn = joblib.load(MODEL_FILE)
+    y_true = []
+    y_pred = []
+
+    for label in LABELS:
+        test_path = os.path.join(DATASET_DIR, label, "test")
+        if not os.path.exists(test_path):
+            continue  # Ignore si le dossier n'existe pas
+
+        for image_name in os.listdir(test_path):
+            if image_name.lower().endswith(('.png', '.jpg', '.jpeg')):
+                image_path = os.path.join(test_path, image_name)
+                features = np.array(extract_features(image_path)).reshape(1, -1)
+                prediction = knn.predict(features)[0]
+                y_true.append(label)
+                y_pred.append(prediction)
+
+    # Calculer la matrice de confusion
+    cm = confusion_matrix(y_true, y_pred, labels=LABELS)
+    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    precision = precision_score(y_true, y_pred, labels=LABELS, average=None)
+
+    # Afficher la matrice de confusion normalisée
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm_normalized, annot=True, fmt='.2f', xticklabels=LABELS, yticklabels=LABELS, cmap='Blues')
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Normalized Confusion Matrix')
+    plt.show()
+
+    # Afficher les précisions pour chaque classe
+    for label, prec in zip(LABELS, precision):
+        print(f"Précision pour {label}: {prec:.2f}")
+
+
 # --- Exécution ---
 # Étape 1 : Construire le dataset (exécuter une seule fois après avoir classé les images)
 #create_dataset()
@@ -95,4 +137,7 @@ def classify_image(image_path):
 #train_knn_model()
 
 # Étape 3 : Classifier une nouvelle image
-#classify_image("dataset/00000026_(4).jpg")
+#classify_image("dataset/foret/test/0A5KPRVRPPEH.jpg")
+
+# Étape 4 : Évaluer le modèle
+evaluate_model()
