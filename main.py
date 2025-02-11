@@ -52,7 +52,7 @@ def create_dataset():
                 features = extract_features(image_path)
                 data.append(features + [label])
 
-a    df = pd.DataFrame(data, columns=["dom_R", "dom_G", "dom_B", "avg_R", "avg_G", "avg_B", "label"])
+    df = pd.DataFrame(data, columns=["dom_R", "dom_G", "dom_B", "avg_R", "avg_G", "avg_B", "label"])
     df.to_csv(CSV_FILE, index=False)
     print(f"Dataset enregistré sous {CSV_FILE}")
 
